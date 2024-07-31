@@ -149,7 +149,7 @@ struct Monitor {
 	int mx, my, mw, mh;   /* screen size */
 	int wx, wy, ww, wh;   /* window area  */
 	int gappx;            /* gaps between windows */
-  int primarymon; //BY ERIK
+  int monid;            /* MonitorId BY ERIK */
 	unsigned int seltags;
 	unsigned int sellt;
 	unsigned int tagset[2];
@@ -341,6 +341,7 @@ static Display *dpy;
 static Drw *drw;
 static Monitor *mons, *selmon;
 static Window root, wmcheckwin;
+int moncount = 0;
 
 static xcb_connection_t *xcon;
 
@@ -559,7 +560,7 @@ buttonpress(XEvent *e)
 	if (ev->window == selmon->barwin) {
 		i = x = 0;
 		do
-			x += TEXTW(tags[i]);
+			x += TEXTW(tags[m->monid][i]);
 		while (ev->x >= x && ++i < LENGTH(tags));
 		if (i < LENGTH(tags)) {
 			click = ClkTagBar;
@@ -838,14 +839,12 @@ createmon(void)
 	m->showbar = showbar;
 	m->topbar = topbar;
 	m->gappx = gappx;
-  if(mons){ // BY ERIK
-    m->primarymon = 1; // BY ERIK
-  }else{ // BY ERIK
-    m->primarymon = 0; // BY ERIK
-  }
+  m->monid = 0;
+  m->monid = moncount; // BY ERIK
 	m->lt[0] = &layouts[0];
 	m->lt[1] = &layouts[1 % LENGTH(layouts)];
 	strncpy(m->ltsymbol, layouts[0].symbol, sizeof m->ltsymbol);
+  moncount = moncount + 1; //Counts monitors to give monitor ID
 	return m;
 }
 
@@ -936,15 +935,15 @@ drawbar(Monitor *m)
 	}
 	x = 0;
 	for (i = 0; i < LENGTH(tags); i++) {
-		w = TEXTW(tags[i]);
-    int isprimmon = m->primarymon; // BY ERIK
+		w = TEXTW(tags[m->monid][i]);
 		drw_setscheme(drw, scheme[m->tagset[m->seltags] & 1 << i ? SchemeSel : SchemeNorm]);
-    if(isprimmon){ // BY ERIK
-		drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i); // BY ERIK
-    }else{ // BY ERIK
-		drw_text(drw, x, 0, w, bh, lrpad / 2, tags2[i], urg & 1 << i); // BY ERIK
-    } // BY ERIK
-    
+    drw_text(drw, x, 0, w, bh, lrpad / 2, tags[m->monid][i], urg & 1 << i); // BY ERIK*/
+    /*switch(m->monid){*/
+    /*  case 0: drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i); // BY ERIK*/
+    /*          break;*/
+    /*  case 1: drw_text(drw, x, 0, w, bh, lrpad / 2, tags2[i], urg & 1 << i); // BY ERIK*/
+    /*          break;*/
+    /*}*/
 		if (occ & 1 << i)
 			drw_rect(drw, x + boxs, boxs, boxw, boxw,
 				m == selmon && selmon->sel && selmon->sel->tags & 1 << i,
@@ -3025,6 +3024,7 @@ zoom(const Arg *arg)
 		return;
 	pop(c);
 }
+
 
 int
 main(int argc, char *argv[])
