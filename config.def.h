@@ -33,7 +33,7 @@ static const char *colors[][3]      = {
 /*                                 {"📧","📺","📺","🌐","🌐","6","7","8","🔑"}}; //RIGHT MONITOR*/
 
 /* tagging FOR HOME MONITOR */
-static const char *tags[9][9] = {{ "", "","3","4","5","6","7","",""},   // MAIN MONITOR
+static const char *tags[9][9] = {{ "", "","","4","5","6","7","",""},   // MAIN MONITOR
                                  {"📧","📺","📺","🌐","♪♫","🗪","💬","🔑","👥"}}; //RIGHT MONITOR
 
 
