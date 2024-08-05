@@ -27,14 +27,8 @@ static const char *colors[][3]      = {
 	[SchemeHid]  = { col_cyan,  col_gray1, col_cyan  },
 };
 
-/* tagging FOR WORK MONITOR */
-/*static const char *tags[9][9] = {{ "", "","3","4","5","6","7","",""},   // MAIN MONITOR*/
-/*                                 {"1","2","3","🌐","🌐","♪♫","🗪","💬","👥"}, //LEFT MONITOR*/
-/*                                 {"📧","📺","📺","🌐","🌐","6","7","8","🔑"}}; //RIGHT MONITOR*/
 
-/* tagging FOR HOME MONITOR */
-static const char *tags[9][9] = {{ "", "","","4","5","6","7","",""},   // MAIN MONITOR
-                                 {"📧","📺","📺","🌐","♪♫","🗪","💬","🔑","👥"}}; //RIGHT MONITOR
+#include "customtags.h"
 
 
 static const Rule rules[] = {
