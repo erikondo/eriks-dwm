@@ -28,7 +28,7 @@ static const char *colors[][3]      = {
 };
 
 
-#include "customtags.h"
+#include "customtags.h" //"EDIT TAG LIST HERE FOR EACH SPECIFIC MACHINE."
 
 
 static const Rule rules[] = {
