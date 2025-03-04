@@ -1,7 +1,7 @@
 /* See LICENSE file for copyright and license details. */
 
 /* appearance */
-static const unsigned int borderpx  = 1;        /* border pixel of windows */
+static const unsigned int borderpx  = 2;        /* border pixel of windows */
 static const unsigned int gappx     = 5;        /* gaps between windows */
 static const unsigned int snap      = 32;       /* snap pixel */
 static const int swallowfloating    = 1;        /* 1 means swallow floating windows by default */
@@ -89,16 +89,16 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_s,      spawn,          {.v = sshotcmd } },
 	{ MODKEY|ShiftMask,             XK_s,      spawn,          {.v = cocrcmd } },
 	{ MODKEY|ShiftMask,             XK_b,      togglebar,      {0} },
-	{ MODKEY,                       XK_j,      focusstackvis,  {.i = +1 } },
-	{ MODKEY,                       XK_k,      focusstackvis,  {.i = -1 } },
+	{ MODKEY,                       XK_j,      focusstackvis,  {.i = -1 } },
+	{ MODKEY,                       XK_k,      focusstackvis,  {.i = +1 } },
 	{ MODKEY|ShiftMask,             XK_j,      focusstackhid,  {.i = -1 } },
 	{ MODKEY|ShiftMask,             XK_k,      focusstackhid,  {.i = +1 } },
 	{ MODKEY,                       XK_i,      incnmaster,     {.i = +1 } },
 	{ MODKEY,                       XK_d,      incnmaster,     {.i = -1 } },
 	{ MODKEY,                       XK_h,      setmfact,       {.f = -0.05} },
 	{ MODKEY,                       XK_l,      setmfact,       {.f = +0.05} },
-	{ MODKEY|ALTMODKEY,             XK_j,      movestack,      {.i = +1 } },
-	{ MODKEY|ALTMODKEY,             XK_k,      movestack,      {.i = -1 } },
+	{ MODKEY|ALTMODKEY,             XK_j,      movestack,      {.i = -1 } },
+	{ MODKEY|ALTMODKEY,             XK_k,      movestack,      {.i = +1 } },
 	{ MODKEY,                       XK_Return, zoom,           {0} },
 	{ MODKEY,                       XK_Tab,    view,           {0} },
 	{ MODKEY|ShiftMask,             XK_c,      killclient,     {0} },
