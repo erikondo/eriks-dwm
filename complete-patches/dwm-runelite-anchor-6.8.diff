@@ -1,0 +1,49 @@
+--- a/dwm.c	2026-07-19 19:23:59.424681477 +0000
++++ b/dwm.c	2026-07-19 19:23:59.498338265 +0000
+@@ -716,16 +716,21 @@
+ 	if ((c = wintoclient(ev->window))) {
+ 		if (ev->value_mask & CWBorderWidth)
+ 			c->bw = ev->border_width;
+-		else if (c->isfloating || !selmon->lt[selmon->sellt]->arrange) {
++
++		if (c->isfloating || !selmon->lt[selmon->sellt]->arrange) {
+ 			m = c->mon;
+-			if (ev->value_mask & CWX) {
++
++			/* ---- POSITION: ignore x/y when the app is only resizing ---- */
++			if ((ev->value_mask & CWX) && !(ev->value_mask & (CWWidth | CWHeight))) {
+ 				c->oldx = c->x;
+ 				c->x = m->mx + ev->x;
+ 			}
+-			if (ev->value_mask & CWY) {
++			if ((ev->value_mask & CWY) && !(ev->value_mask & (CWWidth | CWHeight))) {
+ 				c->oldy = c->y;
+ 				c->y = m->my + ev->y;
+ 			}
++
++			/* ---- SIZE: always apply ---- */
+ 			if (ev->value_mask & CWWidth) {
+ 				c->oldw = c->w;
+ 				c->w = ev->width;
+@@ -734,16 +739,15 @@
+ 				c->oldh = c->h;
+ 				c->h = ev->height;
+ 			}
+-			if ((c->x + c->w) > m->mx + m->mw && c->isfloating)
+-				c->x = m->mx + (m->mw / 2 - WIDTH(c) / 2); /* center in x direction */
+-			if ((c->y + c->h) > m->my + m->mh && c->isfloating)
+-				c->y = m->my + (m->mh / 2 - HEIGHT(c) / 2); /* center in y direction */
+-			if ((ev->value_mask & (CWX|CWY)) && !(ev->value_mask & (CWWidth|CWHeight)))
++
++			/* Send synthetic ConfigureNotify only for real moves */
++			if ((ev->value_mask & (CWX | CWY)) && !(ev->value_mask & (CWWidth | CWHeight)))
+ 				configure(c);
++
+ 			if (ISVISIBLE(c))
+ 				XMoveResizeWindow(dpy, c->win, c->x, c->y, c->w, c->h);
+ 		} else
+-			configure(c);
++			configure(c); /* tiled window */
+ 	} else {
+ 		wc.x = ev->x;
+ 		wc.y = ev->y;
