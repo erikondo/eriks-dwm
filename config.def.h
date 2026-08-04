@@ -39,11 +39,13 @@ static const Rule rules[] = {
 	 *	WM_CLASS(STRING) = instance, class
 	 *	WM_NAME(STRING) = title
 	 */
-	/* class     instance      title           tags mask  isfloating  monitor */
-	{ "Gimp",    NULL,         NULL,           0,         1,          -1 },
-	{ "Firefox", NULL,         NULL,           1 << 8,    0,          -1 },
-	{ NULL,      "RuneLite",   NULL,           0,         1,          -1 },
+	/* class          instance        title           tags mask   iscentered  isfloating  monitor */
+	{ "Gimp",         NULL,           NULL,           0,          0,          1,          -1 },
+	{ "Firefox",      NULL,           NULL,           1 << 8,     0,          0,          -1 },
+  { "Thunderbird",  "Msgcompose",   NULL,           0,          1,          1,          -1 },
+	{ NULL,           "RuneLite",     NULL,           0,          0,          1,          -1 },
 };
+
 
 /* layout(s) */
 static const float mfact     = 0.55; /* factor of master area size [0.05..0.95] */
@@ -130,7 +132,7 @@ static const Key keys[] = {
 	// { ALTMODKEY,                    XK_s,      show,           {0} },
 	{ ALTMODKEY|ShiftMask,          XK_s,      showall,        {0} },
 	{ ALTMODKEY,                    XK_h,      hide,           {0} },
-  { MODKEY|ShiftMask,             XK_r,      self_restart,   {0} },
+  // { MODKEY|ShiftMask,             XK_r,      self_restart,   {0} },
 	{ MODKEY|ShiftMask,             XK_q,      quit,           {0} },
 	{ MODKEY|ControlMask|ShiftMask, XK_q,      quit,           {1} }, 
 	{ MODKEY,                       XK_minus,  setgaps,        {.i = -1 } },
