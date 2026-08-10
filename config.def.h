@@ -81,7 +81,6 @@ static const char *webcmd[]  = { "brave", NULL };
 static const char *sshotcmd[]  = { "screenshot", NULL };
 static const char *cocrcmd[]  = { "cocr", NULL };
 static const char *mailcmd[]  = { "thunderbird", NULL };
-static const char *mpxtoggle[] = { "/home/erik/.local/bin/mpx-toggle.sh", NULL };
 
 //Patch Includes
 #include "selfrestart.c"
@@ -129,7 +128,6 @@ static const Key keys[] = {
 	{ MODKEY|ShiftMask,             XK_comma,  tagmon,         {.i = -1 } },
 	{ MODKEY|ShiftMask,             XK_period, tagmon,         {.i = +1 } },
   // END
-  { MODKEY|ShiftMask,             XK_m,      spawn,          {.v = mpxtoggle } },
 	{ MODKEY,	                      XK_n, 	   shiftview,      {.i = +1 } },
 	{ MODKEY,	                      XK_b, 	   shiftview,      {.i = -1 } },
 	// { ALTMODKEY,                    XK_s,      show,           {0} },
