@@ -2269,6 +2269,24 @@ leftreserve(Monitor *m)
 		}
 }
 
+static void
+rlexpose(Window w)
+{
+	Window rt, par, *ch = NULL;
+	unsigned int nch, j;
+	XWindowAttributes wa;
+
+	/* server-generated Expose on the whole window; guard against
+	 * InputOnly children, where XClearArea would be a BadMatch */
+	if (XGetWindowAttributes(dpy, w, &wa) && wa.class == InputOutput)
+		XClearArea(dpy, w, 0, 0, 0, 0, True);
+	if (XQueryTree(dpy, w, &rt, &par, &ch, &nch) && ch) {
+		for (j = 0; j < nch; j++)
+			rlexpose(ch[j]);
+		XFree(ch);
+	}
+}
+
 void
 runelitedeck(Monitor *m)
 {
@@ -2302,6 +2320,12 @@ runelitedeck(Monitor *m)
 				resizeclient(c, c->x, c->y, s->w + 1, s->h);
 			resizeclient(c, m->mx + s->x, m->my + s->y, s->w, s->h);
 		}
+		/* RuneLite (Java/AWT) often fails to repaint regions newly
+		 * exposed by a WM resize, leaving black bars until an
+		 * external event (screenshot overlay, manual resize)
+		 * generates Expose events. Generate them ourselves. */
+		for (i = 0; i < rn; i++)
+			rlexpose(rl[i]->win);
 	}
 
 	/* everything else tiles to the right of the deck */
