@@ -2289,8 +2289,10 @@ runelitedeck(Monitor *m)
 		for (i = 0; i < rn; i++) {
 			const RLSlot *s = &rlslots[MIN(i, LENGTH(rlslots) - 1)];
 			c = rl[(i + rot) % rn];
-			resize(c, m->mx + s->x, m->my + s->y,
-			       s->w - 2 * c->bw, s->h - 2 * c->bw, 0);
+			/* slot w/h are the exact client area (matches xdotool
+			 * geometry); borders extend into the gaps instead of
+			 * shrinking the canvas below RuneLite's native size */
+			resize(c, m->mx + s->x, m->my + s->y, s->w, s->h, 0);
 		}
 	}
 
