@@ -170,6 +170,12 @@ struct Systray {
 	Client *icons;
 };
 
+typedef struct {
+	int x, y, w, h;	/* slot geometry for the runelitedeck layout */
+} RLSlot;
+
+static int rldeckrot = 0;	/* rotation offset of RuneLite clients within the deck */
+
 /* function declarations */
 static void applyrules(Client *c);
 static int applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact);
@@ -256,6 +262,8 @@ static void tagmon(const Arg *arg);
 static void tile(Monitor *m);
 static void leftreserve(Monitor *m);
 static void runelitedeck(Monitor *m);
+static void rldeckarrange(Monitor *m, const RLSlot *slots, unsigned int nslots);
+static void rlexpose(Window w);
 static void rldeckrotate(const Arg *arg);
 static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
@@ -327,12 +335,6 @@ static Display *dpy;
 static Drw *drw;
 static Monitor *mons, *selmon;
 static Window root, wmcheckwin;
-
-typedef struct {
-	int x, y, w, h;	/* slot geometry for the runelitedeck layout */
-} RLSlot;
-
-static int rldeckrot = 0;	/* rotation offset of RuneLite clients within the deck */
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
@@ -739,7 +741,8 @@ configurerequest(XEvent *e)
 		 * re-run the deck so the slot geometry + Expose land exactly
 		 * when the client is actively laying itself out. */
 		int deckmanaged = c->isrl
-			&& c->mon->lt[c->mon->sellt]->arrange == runelitedeck;
+			&& (c->mon->lt[c->mon->sellt]->arrange == runelitedeck
+			 || c->mon->lt[c->mon->sellt]->arrange == leftreserve);
 
 		if ((c->isfloating && !deckmanaged) || !selmon->lt[selmon->sellt]->arrange) {
 			m = c->mon;
@@ -2266,37 +2269,8 @@ tile(Monitor *m)
 void
 leftreserve(Monitor *m)
 {
-	unsigned int i, n, h, mw, my, ty;
-	int wx, ww;
-	Client *c;
-
-	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++);
-	if (n == 0)
-		return;
-
-	/* same as tile(), but the tiling area starts after a reserved
-	 * strip on the left (for floating RuneLite clients) */
-	wx = m->wx + leftreserve_px;
-	ww = m->ww - leftreserve_px;
-	if (ww < bh)	/* safety: strip wider than monitor -> fall back */
-		{ wx = m->wx; ww = m->ww; }
-
-	if (n > m->nmaster)
-		mw = m->nmaster ? ww * m->mfact : 0;
-	else
-		mw = ww - m->gappx;
-	for (i = 0, my = ty = m->gappx, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
-			if (i < m->nmaster) {
-			h = (m->wh - my) / (MIN(n, m->nmaster) - i) - m->gappx;
-			resize(c, wx + m->gappx, m->wy + my, mw - (2*c->bw) - m->gappx, h - (2*c->bw), 0);
-			if (my + HEIGHT(c) + m->gappx < m->wh)
-				my += HEIGHT(c) + m->gappx;
-		} else {
-			h = (m->wh - ty) / (n - i) - m->gappx;
-			resize(c, wx + mw + m->gappx, m->wy + ty, ww - mw - (2*c->bw) - 2*m->gappx, h - (2*c->bw), 0);
-			if (ty + HEIGHT(c) + m->gappx < m->wh)
-				ty += HEIGHT(c) + m->gappx;
-		}
+	/* column deck: four stacked RuneLite slots down the left edge */
+	rldeckarrange(m, rlstackslots, LENGTH(rlstackslots));
 }
 
 static void
@@ -2317,8 +2291,8 @@ rlexpose(Window w)
 	}
 }
 
-void
-runelitedeck(Monitor *m)
+static void
+rldeckarrange(Monitor *m, const RLSlot *slots, unsigned int nslots)
 {
 	unsigned int i, n, h, mw, my, ty, rn, edge;
 	int wx, ww, rot;
@@ -2335,7 +2309,7 @@ runelitedeck(Monitor *m)
 	if (rn) {
 		rot = ((rldeckrot % (int)rn) + (int)rn) % (int)rn;
 		for (i = 0; i < rn; i++) {
-			const RLSlot *s = &rlslots[MIN(i, LENGTH(rlslots) - 1)];
+			const RLSlot *s = &slots[MIN(i, nslots - 1)];
 			c = rl[(i + rot) % rn];
 			/* Place via resizeclient() directly, bypassing
 			 * applysizehints(): RuneLite publishes size hints that
@@ -2362,9 +2336,9 @@ runelitedeck(Monitor *m)
 	if (rlwork_px >= 0)
 		wx = m->wx + rlwork_px;
 	else {
-		for (edge = 0, i = 0; i < LENGTH(rlslots); i++)
-			if ((unsigned int)(rlslots[i].x + rlslots[i].w) > edge)
-				edge = rlslots[i].x + rlslots[i].w;
+		for (edge = 0, i = 0; i < nslots; i++)
+			if ((unsigned int)(slots[i].x + slots[i].w) > edge)
+				edge = slots[i].x + slots[i].w;
 		wx = m->mx + edge + m->gappx;
 	}
 	ww = m->wx + m->ww - wx;
@@ -2401,6 +2375,13 @@ runelitedeck(Monitor *m)
 		}
 		i++;
 	}
+}
+
+void
+runelitedeck(Monitor *m)
+{
+	/* grid deck: 2x2 small clients plus large main slot */
+	rldeckarrange(m, rlslots, LENGTH(rlslots));
 }
 
 void

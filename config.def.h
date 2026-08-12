@@ -53,7 +53,6 @@ static const int nmaster     = 1;    /* number of clients in master area */
 static const int resizehints = 1;    /* 1 means respect size hints in tiled resizals */
 static const int lockfullscreen = 1; /* 1 will force focus on the fullscreen window */
 static const int refreshrate = 240;  /* refresh rate (per second) for client move/resize */
-static const int leftreserve_px = 1110; /* px reserved on the left for floating RuneLite windows (leftreserve layout) */
 
 /* runelitedeck layout: fixed slots that RuneLite windows snap into.
  * Coordinates are pixels relative to the monitor's top-left corner
@@ -70,6 +69,15 @@ static const RLSlot rlslots[] = {
 	{    10,  562, 1098,  503 },	/* small + sidebar, mid-left */
 	{  1118,  562, 1098,  503 },	/* small + sidebar, mid-right */
 };
+/* leftreserve layout: same deck mechanics, single column of four
+ * small+sidebar clients stacked down the left edge. */
+static const RLSlot rlstackslots[] = {
+	/*    x,    y,    w,    h  */
+	{    10,   49, 1098,  503 },
+	{    10,  562, 1098,  503 },
+	{    10, 1075, 1098,  503 },
+	{    10, 1588, 1098,  503 },
+};
 /* where non-RuneLite windows start tiling. -1 = automatic: just right
  * of the rightmost slot edge (+ gap). Set a pixel value to override. */
 static const int rlwork_px = -1;
@@ -79,7 +87,7 @@ static const Layout layouts[] = {
 	{ "[]=",      tile },    /* first entry is default */
 	{ "><>",      NULL },    /* no layout function means floating behavior */
 	{ "[M]",      monocle },
-	{ "|[]=",     leftreserve }, /* tile, but right of the RuneLite strip */
+	{ "|[]=",     leftreserve }, /* column deck: 4 stacked RL slots, rest tiles right */
 	{ "|RL=",     runelitedeck }, /* RuneLite slots left, everything else tiles right */
 };
 
