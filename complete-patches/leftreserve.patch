@@ -1,0 +1,82 @@
+diff --git a/config.def.h b/config.def.h
+index 73a7977..f86d8b4 100644
+--- a/config.def.h
++++ b/config.def.h
+@@ -53,12 +53,14 @@ static const int nmaster     = 1;    /* number of clients in master area */
+ static const int resizehints = 1;    /* 1 means respect size hints in tiled resizals */
+ static const int lockfullscreen = 1; /* 1 will force focus on the fullscreen window */
+ static const int refreshrate = 120;  /* refresh rate (per second) for client move/resize */
++static const int leftreserve_px = 740; /* px reserved on the left for floating RuneLite windows (leftreserve layout) */
+ 
+ static const Layout layouts[] = {
+ 	/* symbol     arrange function */
+ 	{ "[]=",      tile },    /* first entry is default */
+ 	{ "><>",      NULL },    /* no layout function means floating behavior */
+ 	{ "[M]",      monocle },
++	{ "|[]=",     leftreserve }, /* tile, but right of the RuneLite strip */
+ };
+ 
+ /* key definitions */
+@@ -112,6 +114,7 @@ static const Key keys[] = {
+ 	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
+ 	{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[1]} },
+ 	{ MODKEY,                       XK_m,      setlayout,      {.v = &layouts[2]} },
++	{ MODKEY,                       XK_r,      setlayout,      {.v = &layouts[3]} },
+ 	{ MODKEY,                       XK_space,  setlayout,      {0} },
+ 	{ MODKEY|ShiftMask,             XK_space,  togglefloating, {0} },
+ 	{ MODKEY,                       XK_0,      view,           {.ui = ~0 } },
+diff --git a/dwm.c b/dwm.c
+index 805c8a6..1f42094 100644
+--- a/dwm.c
++++ b/dwm.c
+@@ -252,6 +252,7 @@ static Monitor *systraytomon(Monitor *m);
+ static void tag(const Arg *arg);
+ static void tagmon(const Arg *arg);
+ static void tile(Monitor *m);
++static void leftreserve(Monitor *m);
+ static void togglebar(const Arg *arg);
+ static void togglefloating(const Arg *arg);
+ static void toggletag(const Arg *arg);
+@@ -2222,6 +2223,42 @@ tile(Monitor *m)
+ 		}
+ }
+ 
++void
++leftreserve(Monitor *m)
++{
++	unsigned int i, n, h, mw, my, ty;
++	int wx, ww;
++	Client *c;
++
++	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), n++);
++	if (n == 0)
++		return;
++
++	/* same as tile(), but the tiling area starts after a reserved
++	 * strip on the left (for floating RuneLite clients) */
++	wx = m->wx + leftreserve_px;
++	ww = m->ww - leftreserve_px;
++	if (ww < bh)	/* safety: strip wider than monitor -> fall back */
++		{ wx = m->wx; ww = m->ww; }
++
++	if (n > m->nmaster)
++		mw = m->nmaster ? ww * m->mfact : 0;
++	else
++		mw = ww - m->gappx;
++	for (i = 0, my = ty = m->gappx, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
++			if (i < m->nmaster) {
++			h = (m->wh - my) / (MIN(n, m->nmaster) - i) - m->gappx;
++			resize(c, wx + m->gappx, m->wy + my, mw - (2*c->bw) - m->gappx, h - (2*c->bw), 0);
++			if (my + HEIGHT(c) + m->gappx < m->wh)
++				my += HEIGHT(c) + m->gappx;
++		} else {
++			h = (m->wh - ty) / (n - i) - m->gappx;
++			resize(c, wx + mw + m->gappx, m->wy + ty, ww - mw - (2*c->bw) - 2*m->gappx, h - (2*c->bw), 0);
++			if (ty + HEIGHT(c) + m->gappx < m->wh)
++				ty += HEIGHT(c) + m->gappx;
++		}
++}
++
+ void
+ togglebar(const Arg *arg)
+ {
