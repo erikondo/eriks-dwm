@@ -731,7 +731,16 @@ configurerequest(XEvent *e)
 		if (ev->value_mask & CWBorderWidth)
 			c->bw = ev->border_width;
 
-		if (c->isfloating || !selmon->lt[selmon->sellt]->arrange) {
+		/* While the runelitedeck layout is active, RuneLite clients
+		 * are slot-managed even though they are floating: refuse
+		 * their self-configure requests (Java re-asserts remembered
+		 * geometry during startup and on internal relayouts) and
+		 * re-run the deck so the slot geometry + Expose land exactly
+		 * when the client is actively laying itself out. */
+		int deckmanaged = c->isrl
+			&& c->mon->lt[c->mon->sellt]->arrange == runelitedeck;
+
+		if ((c->isfloating && !deckmanaged) || !selmon->lt[selmon->sellt]->arrange) {
 			m = c->mon;
 
 			/* ---- POSITION: ignore x/y when the app is only resizing ---- */
@@ -760,8 +769,11 @@ configurerequest(XEvent *e)
 
 			if (ISVISIBLE(c))
 				XMoveResizeWindow(dpy, c->win, c->x, c->y, c->w, c->h);
-		} else
-			configure(c); /* tiled window */
+		} else {
+			configure(c); /* tiled or deck-managed window */
+			if (deckmanaged)
+				arrange(c->mon);
+		}
 	} else {
 		wc.x = ev->x;
 		wc.y = ev->y;
