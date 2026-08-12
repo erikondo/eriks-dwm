@@ -2289,18 +2289,18 @@ runelitedeck(Monitor *m)
 		for (i = 0; i < rn; i++) {
 			const RLSlot *s = &rlslots[MIN(i, LENGTH(rlslots) - 1)];
 			c = rl[(i + rot) % rn];
-			/* Java/AWT sometimes fails to relayout when a WM resize
-			 * is a no-op (geometry already matches, so dwm sends no
-			 * event and RuneLite keeps stale black bars). Jiggle by
-			 * one pixel first so every pass emits real ConfigureNotify
-			 * events and AWT is forced to relayout. */
+			/* Place via resizeclient() directly, bypassing
+			 * applysizehints(): RuneLite publishes size hints that
+			 * can clamp or swallow the slot geometry entirely,
+			 * leaving the window untouched and its canvas stale.
+			 * Jiggle by one pixel when geometry already matches so
+			 * every pass emits real ConfigureNotify events and AWT
+			 * is forced to relayout. Slot w/h are the exact client
+			 * area (matches xdotool geometry). */
 			if (c->x == m->mx + s->x && c->y == m->my + s->y
 			&& c->w == s->w && c->h == s->h)
-				resizeclient(c, c->x, c->y, c->w + 1, c->h);
-			/* slot w/h are the exact client area (matches xdotool
-			 * geometry); borders extend into the gaps instead of
-			 * shrinking the canvas below RuneLite's native size */
-			resize(c, m->mx + s->x, m->my + s->y, s->w, s->h, 0);
+				resizeclient(c, c->x, c->y, s->w + 1, s->h);
+			resizeclient(c, m->mx + s->x, m->my + s->y, s->w, s->h);
 		}
 	}
 
