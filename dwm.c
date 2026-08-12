@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -771,8 +772,25 @@ configurerequest(XEvent *e)
 				XMoveResizeWindow(dpy, c->win, c->x, c->y, c->w, c->h);
 		} else {
 			configure(c); /* tiled or deck-managed window */
-			if (deckmanaged)
-				arrange(c->mon);
+			/* Re-assert the deck on a refused RuneLite request, but
+			 * rate-limited: the arrange itself emits resize/expose
+			 * events RuneLite may react to with another request,
+			 * and answering every one creates a flicker loop.
+			 * Repeat requests within the window get the silent
+			 * refusal only, which starves the loop. */
+			if (deckmanaged) {
+				static struct timespec rl_last = {0};
+				struct timespec rl_now;
+				long ms;
+
+				clock_gettime(CLOCK_MONOTONIC, &rl_now);
+				ms = (rl_now.tv_sec - rl_last.tv_sec) * 1000
+				   + (rl_now.tv_nsec - rl_last.tv_nsec) / 1000000;
+				if (ms > 500) {
+					rl_last = rl_now;
+					arrange(c->mon);
+				}
+			}
 		}
 	} else {
 		wc.x = ev->x;
