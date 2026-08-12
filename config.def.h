@@ -57,17 +57,17 @@ static const int refreshrate = 240;  /* refresh rate (per second) for client mov
 /* runelitedeck layout: fixed slots that RuneLite windows snap into.
  * Coordinates are pixels relative to the monitor's top-left corner
  * (same numbers xdotool getwindowgeometry reports on a monitor at 0,0).
- * Grid: two rows of two small+sidebar clients (1098x503), large client
+ * Grid: two rows of two sidebar-closed clients (765x503), large client
  * (1833x1006) at the bottom, 10px gaps, starting below a 39px bar.
  * First slot is the "main" (large) position; Mod+o / Mod+Shift+o
  * rotates which client sits where. Edit freely. */
 static const RLSlot rlslots[] = {
 	/*    x,    y,    w,    h  */
 	{    10, 1075, 1833, 1006 },	/* main: large client + sidebar, bottom */
-	{    10,   49, 1098,  503 },	/* small + sidebar, top-left */
-	{  1118,   49, 1098,  503 },	/* small + sidebar, top-right */
-	{    10,  562, 1098,  503 },	/* small + sidebar, mid-left */
-	{  1118,  562, 1098,  503 },	/* small + sidebar, mid-right */
+	{    10,   49,  765,  503 },	/* small, no sidebar, top-left */
+	{   785,   49,  765,  503 },	/* small, no sidebar, top-right */
+	{    10,  562,  765,  503 },	/* small, no sidebar, mid-left */
+	{   785,  562,  765,  503 },	/* small, no sidebar, mid-right */
 };
 /* leftreserve layout: same deck mechanics, single column of four
  * small+sidebar clients stacked down the left edge. */
