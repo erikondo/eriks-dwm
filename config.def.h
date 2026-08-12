@@ -55,12 +55,32 @@ static const int lockfullscreen = 1; /* 1 will force focus on the fullscreen win
 static const int refreshrate = 240;  /* refresh rate (per second) for client move/resize */
 static const int leftreserve_px = 1110; /* px reserved on the left for floating RuneLite windows (leftreserve layout) */
 
+/* runelitedeck layout: fixed slots that RuneLite windows snap into.
+ * Coordinates are pixels relative to the monitor's top-left corner
+ * (same numbers xdotool getwindowgeometry reports on a monitor at 0,0).
+ * Grid: two rows of two small+sidebar clients (1098x503), large client
+ * (1833x1006) at the bottom, 10px gaps, starting below a 39px bar.
+ * First slot is the "main" (large) position; Mod+o / Mod+Shift+o
+ * rotates which client sits where. Edit freely. */
+static const RLSlot rlslots[] = {
+	/*    x,    y,    w,    h  */
+	{    10, 1075, 1833, 1006 },	/* main: large client + sidebar, bottom */
+	{    10,   49, 1098,  503 },	/* small + sidebar, top-left */
+	{  1118,   49, 1098,  503 },	/* small + sidebar, top-right */
+	{    10,  562, 1098,  503 },	/* small + sidebar, mid-left */
+	{  1118,  562, 1098,  503 },	/* small + sidebar, mid-right */
+};
+/* where non-RuneLite windows start tiling. -1 = automatic: just right
+ * of the rightmost slot edge (+ gap). Set a pixel value to override. */
+static const int rlwork_px = -1;
+
 static const Layout layouts[] = {
 	/* symbol     arrange function */
 	{ "[]=",      tile },    /* first entry is default */
 	{ "><>",      NULL },    /* no layout function means floating behavior */
 	{ "[M]",      monocle },
 	{ "|[]=",     leftreserve }, /* tile, but right of the RuneLite strip */
+	{ "|RL=",     runelitedeck }, /* RuneLite slots left, everything else tiles right */
 };
 
 /* key definitions */
@@ -115,6 +135,9 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[1]} },
 	{ MODKEY,                       XK_m,      setlayout,      {.v = &layouts[2]} },
 	{ MODKEY,                       XK_r,      setlayout,      {.v = &layouts[3]} },
+	{ MODKEY,                       XK_g,      setlayout,      {.v = &layouts[4]} },
+	{ MODKEY,                       XK_o,      rldeckrotate,   {.i = +1 } },
+	{ MODKEY|ShiftMask,             XK_o,      rldeckrotate,   {.i = -1 } },
 	{ MODKEY,                       XK_space,  setlayout,      {0} },
 	{ MODKEY|ShiftMask,             XK_space,  togglefloating, {0} },
 	{ MODKEY,                       XK_0,      view,           {.ui = ~0 } },

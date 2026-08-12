@@ -109,6 +109,7 @@ struct Client {
 	int bw, oldbw;
 	unsigned int tags;
 	int isfixed, iscentered, isfloating, isurgent, neverfocus, oldstate, isfullscreen;
+	int isrl;		/* client is a RuneLite window (runelitedeck layout) */
 	Client *next;
 	Client *snext;
 	Monitor *mon;
@@ -253,6 +254,8 @@ static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
 static void tile(Monitor *m);
 static void leftreserve(Monitor *m);
+static void runelitedeck(Monitor *m);
+static void rldeckrotate(const Arg *arg);
 static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
 static void toggletag(const Arg *arg);
@@ -324,6 +327,12 @@ static Drw *drw;
 static Monitor *mons, *selmon;
 static Window root, wmcheckwin;
 
+typedef struct {
+	int x, y, w, h;	/* slot geometry for the runelitedeck layout */
+} RLSlot;
+
+static int rldeckrot = 0;	/* rotation offset of RuneLite clients within the deck */
+
 /* configuration, allows nested code to access above variables */
 #include "config.h"
 
@@ -347,6 +356,7 @@ applyrules(Client *c)
 	XGetClassHint(dpy, c->win, &ch);
 	class    = ch.res_class ? ch.res_class : broken;
 	instance = ch.res_name  ? ch.res_name  : broken;
+	c->isrl  = strstr(class, "RuneLite") != NULL || strstr(instance, "RuneLite") != NULL;
 
 	for (i = 0; i < LENGTH(rules); i++) {
 		r = &rules[i];
@@ -2257,6 +2267,83 @@ leftreserve(Monitor *m)
 			if (ty + HEIGHT(c) + m->gappx < m->wh)
 				ty += HEIGHT(c) + m->gappx;
 		}
+}
+
+void
+runelitedeck(Monitor *m)
+{
+	unsigned int i, n, h, mw, my, ty, rn, edge;
+	int wx, ww, rot;
+	Client *c;
+	Client *rl[32];
+
+	/* collect visible RuneLite clients, floating or not, in list order */
+	for (rn = 0, c = m->clients; c && rn < LENGTH(rl); c = c->next)
+		if (ISVISIBLE(c) && c->isrl)
+			rl[rn++] = c;
+
+	/* pin them into the configured slots, rotated by rldeckrot;
+	 * extras beyond the slot count stack in the last slot */
+	if (rn) {
+		rot = ((rldeckrot % (int)rn) + (int)rn) % (int)rn;
+		for (i = 0; i < rn; i++) {
+			const RLSlot *s = &rlslots[MIN(i, LENGTH(rlslots) - 1)];
+			c = rl[(i + rot) % rn];
+			resize(c, m->mx + s->x, m->my + s->y,
+			       s->w - 2 * c->bw, s->h - 2 * c->bw, 0);
+		}
+	}
+
+	/* everything else tiles to the right of the deck */
+	if (rlwork_px >= 0)
+		wx = m->wx + rlwork_px;
+	else {
+		for (edge = 0, i = 0; i < LENGTH(rlslots); i++)
+			if ((unsigned int)(rlslots[i].x + rlslots[i].w) > edge)
+				edge = rlslots[i].x + rlslots[i].w;
+		wx = m->mx + edge + m->gappx;
+	}
+	ww = m->wx + m->ww - wx;
+	if (ww < bh) {	/* no room left: fall back to the full width */
+		wx = m->wx;
+		ww = m->ww;
+	}
+
+	for (n = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next))
+		if (!c->isrl)
+			n++;
+	if (n == 0)
+		return;
+
+	if (n > m->nmaster)
+		mw = m->nmaster ? ww * m->mfact : 0;
+	else
+		mw = ww - m->gappx;
+	i = 0;
+	my = ty = m->gappx;
+	for (c = nexttiled(m->clients); c; c = nexttiled(c->next)) {
+		if (c->isrl)
+			continue;
+		if (i < m->nmaster) {
+			h = (m->wh - my) / (MIN(n, m->nmaster) - i) - m->gappx;
+			resize(c, wx + m->gappx, m->wy + my, mw - (2*c->bw) - m->gappx, h - (2*c->bw), 0);
+			if (my + HEIGHT(c) + m->gappx < m->wh)
+				my += HEIGHT(c) + m->gappx;
+		} else {
+			h = (m->wh - ty) / (n - i) - m->gappx;
+			resize(c, wx + mw + m->gappx, m->wy + ty, ww - mw - (2*c->bw) - 2*m->gappx, h - (2*c->bw), 0);
+			if (ty + HEIGHT(c) + m->gappx < m->wh)
+				ty += HEIGHT(c) + m->gappx;
+		}
+		i++;
+	}
+}
+
+void
+rldeckrotate(const Arg *arg)
+{
+	rldeckrot += arg->i;
+	arrange(selmon);
 }
 
 void
