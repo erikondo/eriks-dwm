@@ -63,7 +63,7 @@ static const int refreshrate = 240;  /* refresh rate (per second) for client mov
  * rotates which client sits where. Edit freely. */
 static const RLSlot rlslots[] = {
 	/*    x,    y,    w,    h  */
-	{    10, 1075, 1833, 1006 },	/* main: large client + sidebar, bottom */
+	{    10, 1075, 1833, 1006, 1530 },	/* main: sidebar open; Mod+Shift+g toggles to 1530 (closed), widening the work area */
 	{    10,   49,  765,  503 },	/* small, no sidebar, top-left */
 	{   785,   49,  765,  503 },	/* small, no sidebar, top-right */
 	{    10,  562,  765,  503 },	/* small, no sidebar, mid-left */
@@ -144,6 +144,7 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_m,      setlayout,      {.v = &layouts[2]} },
 	{ MODKEY,                       XK_r,      setlayout,      {.v = &layouts[3]} },
 	{ MODKEY,                       XK_g,      setlayout,      {.v = &layouts[4]} },
+	{ MODKEY|ShiftMask,             XK_g,      rldecktogglealt, {0} },
 	{ MODKEY,                       XK_o,      rldeckrotate,   {.i = +1 } },
 	{ MODKEY|ShiftMask,             XK_o,      rldeckrotate,   {.i = -1 } },
 	{ MODKEY,                       XK_space,  setlayout,      {0} },

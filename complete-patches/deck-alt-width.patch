@@ -1,0 +1,99 @@
+diff --git a/config.def.h b/config.def.h
+index 603bc3b..51a4a94 100644
+--- a/config.def.h
++++ b/config.def.h
+@@ -63,7 +63,7 @@ static const int refreshrate = 240;  /* refresh rate (per second) for client mov
+  * rotates which client sits where. Edit freely. */
+ static const RLSlot rlslots[] = {
+ 	/*    x,    y,    w,    h  */
+-	{    10, 1075, 1833, 1006 },	/* main: large client + sidebar, bottom */
++	{    10, 1075, 1833, 1006, 1530 },	/* main: sidebar open; Mod+Shift+g toggles to 1530 (closed), widening the work area */
+ 	{    10,   49,  765,  503 },	/* small, no sidebar, top-left */
+ 	{   785,   49,  765,  503 },	/* small, no sidebar, top-right */
+ 	{    10,  562,  765,  503 },	/* small, no sidebar, mid-left */
+@@ -144,6 +144,7 @@ static const Key keys[] = {
+ 	{ MODKEY,                       XK_m,      setlayout,      {.v = &layouts[2]} },
+ 	{ MODKEY,                       XK_r,      setlayout,      {.v = &layouts[3]} },
+ 	{ MODKEY,                       XK_g,      setlayout,      {.v = &layouts[4]} },
++	{ MODKEY|ShiftMask,             XK_g,      rldecktogglealt, {0} },
+ 	{ MODKEY,                       XK_o,      rldeckrotate,   {.i = +1 } },
+ 	{ MODKEY|ShiftMask,             XK_o,      rldeckrotate,   {.i = -1 } },
+ 	{ MODKEY,                       XK_space,  setlayout,      {0} },
+diff --git a/dwm.c b/dwm.c
+index a432118..73640e6 100644
+--- a/dwm.c
++++ b/dwm.c
+@@ -171,10 +171,13 @@ struct Systray {
+ };
+ 
+ typedef struct {
+-	int x, y, w, h;	/* slot geometry for the runelitedeck layout */
++	int x, y, w, h;	/* slot geometry for the deck layouts */
++	int walt;	/* optional alternate width (0 = none); toggled
++			 * for all slots at once with rldecktogglealt() */
+ } RLSlot;
+ 
+ static int rldeckrot = 0;	/* rotation offset of RuneLite clients within the deck */
++static int rldeckalt = 0;	/* nonzero: slots with an alternate width use it */
+ 
+ /* function declarations */
+ static void applyrules(Client *c);
+@@ -265,6 +268,7 @@ static void runelitedeck(Monitor *m);
+ static void rldeckarrange(Monitor *m, const RLSlot *slots, unsigned int nslots);
+ static void rlexpose(Window w);
+ static void rldeckrotate(const Arg *arg);
++static void rldecktogglealt(const Arg *arg);
+ static void togglebar(const Arg *arg);
+ static void togglefloating(const Arg *arg);
+ static void toggletag(const Arg *arg);
+@@ -2310,6 +2314,7 @@ rldeckarrange(Monitor *m, const RLSlot *slots, unsigned int nslots)
+ 		rot = ((rldeckrot % (int)rn) + (int)rn) % (int)rn;
+ 		for (i = 0; i < rn; i++) {
+ 			const RLSlot *s = &slots[MIN(i, nslots - 1)];
++			int sw = (rldeckalt && s->walt) ? s->walt : s->w;
+ 			c = rl[(i + rot) % rn];
+ 			/* Place via resizeclient() directly, bypassing
+ 			 * applysizehints(): RuneLite publishes size hints that
+@@ -2320,9 +2325,9 @@ rldeckarrange(Monitor *m, const RLSlot *slots, unsigned int nslots)
+ 			 * is forced to relayout. Slot w/h are the exact client
+ 			 * area (matches xdotool geometry). */
+ 			if (c->x == m->mx + s->x && c->y == m->my + s->y
+-			&& c->w == s->w && c->h == s->h)
+-				resizeclient(c, c->x, c->y, s->w + 1, s->h);
+-			resizeclient(c, m->mx + s->x, m->my + s->y, s->w, s->h);
++			&& c->w == sw && c->h == s->h)
++				resizeclient(c, c->x, c->y, sw + 1, s->h);
++			resizeclient(c, m->mx + s->x, m->my + s->y, sw, s->h);
+ 		}
+ 		/* RuneLite (Java/AWT) often fails to repaint regions newly
+ 		 * exposed by a WM resize, leaving black bars until an
+@@ -2336,9 +2341,12 @@ rldeckarrange(Monitor *m, const RLSlot *slots, unsigned int nslots)
+ 	if (rlwork_px >= 0)
+ 		wx = m->wx + rlwork_px;
+ 	else {
+-		for (edge = 0, i = 0; i < nslots; i++)
+-			if ((unsigned int)(slots[i].x + slots[i].w) > edge)
+-				edge = slots[i].x + slots[i].w;
++		for (edge = 0, i = 0; i < nslots; i++) {
++			int ew = (rldeckalt && slots[i].walt)
++			       ? slots[i].walt : slots[i].w;
++			if ((unsigned int)(slots[i].x + ew) > edge)
++				edge = slots[i].x + ew;
++		}
+ 		wx = m->mx + edge + m->gappx;
+ 	}
+ 	ww = m->wx + m->ww - wx;
+@@ -2391,6 +2399,13 @@ rldeckrotate(const Arg *arg)
+ 	arrange(selmon);
+ }
+ 
++void
++rldecktogglealt(const Arg *arg)
++{
++	rldeckalt = !rldeckalt;
++	arrange(selmon);
++}
++
+ void
+ togglebar(const Arg *arg)
+ {

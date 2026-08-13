@@ -171,10 +171,13 @@ struct Systray {
 };
 
 typedef struct {
-	int x, y, w, h;	/* slot geometry for the runelitedeck layout */
+	int x, y, w, h;	/* slot geometry for the deck layouts */
+	int walt;	/* optional alternate width (0 = none); toggled
+			 * for all slots at once with rldecktogglealt() */
 } RLSlot;
 
 static int rldeckrot = 0;	/* rotation offset of RuneLite clients within the deck */
+static int rldeckalt = 0;	/* nonzero: slots with an alternate width use it */
 
 /* function declarations */
 static void applyrules(Client *c);
@@ -265,6 +268,7 @@ static void runelitedeck(Monitor *m);
 static void rldeckarrange(Monitor *m, const RLSlot *slots, unsigned int nslots);
 static void rlexpose(Window w);
 static void rldeckrotate(const Arg *arg);
+static void rldecktogglealt(const Arg *arg);
 static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
 static void toggletag(const Arg *arg);
@@ -2310,6 +2314,7 @@ rldeckarrange(Monitor *m, const RLSlot *slots, unsigned int nslots)
 		rot = ((rldeckrot % (int)rn) + (int)rn) % (int)rn;
 		for (i = 0; i < rn; i++) {
 			const RLSlot *s = &slots[MIN(i, nslots - 1)];
+			int sw = (rldeckalt && s->walt) ? s->walt : s->w;
 			c = rl[(i + rot) % rn];
 			/* Place via resizeclient() directly, bypassing
 			 * applysizehints(): RuneLite publishes size hints that
@@ -2320,9 +2325,9 @@ rldeckarrange(Monitor *m, const RLSlot *slots, unsigned int nslots)
 			 * is forced to relayout. Slot w/h are the exact client
 			 * area (matches xdotool geometry). */
 			if (c->x == m->mx + s->x && c->y == m->my + s->y
-			&& c->w == s->w && c->h == s->h)
-				resizeclient(c, c->x, c->y, s->w + 1, s->h);
-			resizeclient(c, m->mx + s->x, m->my + s->y, s->w, s->h);
+			&& c->w == sw && c->h == s->h)
+				resizeclient(c, c->x, c->y, sw + 1, s->h);
+			resizeclient(c, m->mx + s->x, m->my + s->y, sw, s->h);
 		}
 		/* RuneLite (Java/AWT) often fails to repaint regions newly
 		 * exposed by a WM resize, leaving black bars until an
@@ -2336,9 +2341,12 @@ rldeckarrange(Monitor *m, const RLSlot *slots, unsigned int nslots)
 	if (rlwork_px >= 0)
 		wx = m->wx + rlwork_px;
 	else {
-		for (edge = 0, i = 0; i < nslots; i++)
-			if ((unsigned int)(slots[i].x + slots[i].w) > edge)
-				edge = slots[i].x + slots[i].w;
+		for (edge = 0, i = 0; i < nslots; i++) {
+			int ew = (rldeckalt && slots[i].walt)
+			       ? slots[i].walt : slots[i].w;
+			if ((unsigned int)(slots[i].x + ew) > edge)
+				edge = slots[i].x + ew;
+		}
 		wx = m->mx + edge + m->gappx;
 	}
 	ww = m->wx + m->ww - wx;
@@ -2388,6 +2396,13 @@ void
 rldeckrotate(const Arg *arg)
 {
 	rldeckrot += arg->i;
+	arrange(selmon);
+}
+
+void
+rldecktogglealt(const Arg *arg)
+{
+	rldeckalt = !rldeckalt;
 	arrange(selmon);
 }
 
