@@ -1,0 +1,28 @@
+diff --git a/dwm.c b/dwm.c
+index 73640e6..e452380 100644
+--- a/dwm.c
++++ b/dwm.c
+@@ -2305,7 +2305,7 @@ rldeckarrange(Monitor *m, const RLSlot *slots, unsigned int nslots)
+ 
+ 	/* collect visible RuneLite clients, floating or not, in list order */
+ 	for (rn = 0, c = m->clients; c && rn < LENGTH(rl); c = c->next)
+-		if (ISVISIBLE(c) && c->isrl)
++		if (ISVISIBLE(c) && !HIDDEN(c) && c->isrl)
+ 			rl[rn++] = c;
+ 
+ 	/* pin them into the configured slots, rotated by rldeckrot;
+@@ -2337,8 +2337,12 @@ rldeckarrange(Monitor *m, const RLSlot *slots, unsigned int nslots)
+ 			rlexpose(rl[i]->win);
+ 	}
+ 
+-	/* everything else tiles to the right of the deck */
+-	if (rlwork_px >= 0)
++	/* everything else tiles to the right of the deck; with no
++	 * RuneLite clients visible there is nothing to reserve, so
++	 * the work area takes the full monitor */
++	if (rn == 0)
++		wx = m->wx;
++	else if (rlwork_px >= 0)
+ 		wx = m->wx + rlwork_px;
+ 	else {
+ 		for (edge = 0, i = 0; i < nslots; i++) {
