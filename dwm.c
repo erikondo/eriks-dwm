@@ -177,7 +177,8 @@ typedef struct {
 } RLSlot;
 
 static int rldeckrot = 0;	/* rotation offset of RuneLite clients within the deck */
-static int rldeckalt = 0;	/* nonzero: slots with an alternate width use it */
+static int rldeckalt = 0;	/* grid deck: nonzero = alternate widths active */
+static int rlstackalt = 0;	/* column deck: nonzero = alternate widths active */
 
 /* function declarations */
 static void applyrules(Client *c);
@@ -265,7 +266,7 @@ static void tagmon(const Arg *arg);
 static void tile(Monitor *m);
 static void leftreserve(Monitor *m);
 static void runelitedeck(Monitor *m);
-static void rldeckarrange(Monitor *m, const RLSlot *slots, unsigned int nslots);
+static void rldeckarrange(Monitor *m, const RLSlot *slots, unsigned int nslots, int alt);
 static void rlexpose(Window w);
 static void rldeckrotate(const Arg *arg);
 static void rldecktogglealt(const Arg *arg);
@@ -2274,7 +2275,7 @@ void
 leftreserve(Monitor *m)
 {
 	/* column deck: four stacked RuneLite slots down the left edge */
-	rldeckarrange(m, rlstackslots, LENGTH(rlstackslots));
+	rldeckarrange(m, rlstackslots, LENGTH(rlstackslots), rlstackalt);
 }
 
 static void
@@ -2296,7 +2297,7 @@ rlexpose(Window w)
 }
 
 static void
-rldeckarrange(Monitor *m, const RLSlot *slots, unsigned int nslots)
+rldeckarrange(Monitor *m, const RLSlot *slots, unsigned int nslots, int alt)
 {
 	unsigned int i, n, h, mw, my, ty, rn, edge;
 	int wx, ww, rot;
@@ -2314,7 +2315,7 @@ rldeckarrange(Monitor *m, const RLSlot *slots, unsigned int nslots)
 		rot = ((rldeckrot % (int)rn) + (int)rn) % (int)rn;
 		for (i = 0; i < rn; i++) {
 			const RLSlot *s = &slots[MIN(i, nslots - 1)];
-			int sw = (rldeckalt && s->walt) ? s->walt : s->w;
+			int sw = (alt && s->walt) ? s->walt : s->w;
 			c = rl[(i + rot) % rn];
 			/* Place via resizeclient() directly, bypassing
 			 * applysizehints(): RuneLite publishes size hints that
@@ -2346,7 +2347,7 @@ rldeckarrange(Monitor *m, const RLSlot *slots, unsigned int nslots)
 		wx = m->wx + rlwork_px;
 	else {
 		for (edge = 0, i = 0; i < nslots; i++) {
-			int ew = (rldeckalt && slots[i].walt)
+			int ew = (alt && slots[i].walt)
 			       ? slots[i].walt : slots[i].w;
 			if ((unsigned int)(slots[i].x + ew) > edge)
 				edge = slots[i].x + ew;
@@ -2393,7 +2394,7 @@ void
 runelitedeck(Monitor *m)
 {
 	/* grid deck: 2x2 small clients plus large main slot */
-	rldeckarrange(m, rlslots, LENGTH(rlslots));
+	rldeckarrange(m, rlslots, LENGTH(rlslots), rldeckalt);
 }
 
 void
@@ -2406,7 +2407,8 @@ rldeckrotate(const Arg *arg)
 void
 rldecktogglealt(const Arg *arg)
 {
-	rldeckalt = !rldeckalt;
+	/* arg->v points at the deck's alt flag (rldeckalt / rlstackalt) */
+	*(int *)arg->v ^= 1;
 	arrange(selmon);
 }
 

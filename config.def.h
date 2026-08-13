@@ -72,11 +72,11 @@ static const RLSlot rlslots[] = {
 /* leftreserve layout: same deck mechanics, single column of four
  * small+sidebar clients stacked down the left edge. */
 static const RLSlot rlstackslots[] = {
-	/*    x,    y,    w,    h  */
-	{    10,   49, 1098,  503 },
-	{    10,  562, 1098,  503 },
-	{    10, 1075, 1098,  503 },
-	{    10, 1588, 1098,  503 },
+	/*    x,    y,    w,    h, walt (Mod+Shift+r: sidebar-closed width) */
+	{    10,   49, 1098,  503,  765 },
+	{    10,  562, 1098,  503,  765 },
+	{    10, 1075, 1098,  503,  765 },
+	{    10, 1588, 1098,  503,  765 },
 };
 /* where non-RuneLite windows start tiling. -1 = automatic: just right
  * of the rightmost slot edge (+ gap). Set a pixel value to override. */
@@ -144,9 +144,10 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_m,      setlayout,      {.v = &layouts[2]} },
 	{ MODKEY,                       XK_r,      setlayout,      {.v = &layouts[3]} },
 	{ MODKEY,                       XK_g,      setlayout,      {.v = &layouts[4]} },
-	{ MODKEY|ShiftMask,             XK_g,      rldecktogglealt, {0} },
-	{ MODKEY,                       XK_o,      rldeckrotate,   {.i = +1 } },
-	{ MODKEY|ShiftMask,             XK_o,      rldeckrotate,   {.i = -1 } },
+	{ MODKEY|ShiftMask,             XK_g,      rldecktogglealt, {.v = &rldeckalt } },
+	{ MODKEY|ShiftMask,             XK_r,      rldecktogglealt, {.v = &rlstackalt } },
+	{ MODKEY,                       XK_v,      rldeckrotate,   {.i = +1 } },
+	{ MODKEY|ShiftMask,             XK_v,      rldeckrotate,   {.i = -1 } },
 	{ MODKEY,                       XK_space,  setlayout,      {0} },
 	{ MODKEY|ShiftMask,             XK_space,  togglefloating, {0} },
 	{ MODKEY,                       XK_0,      view,           {.ui = ~0 } },
