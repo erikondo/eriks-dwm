@@ -1,0 +1,24 @@
+diff --git a/dwm.c b/dwm.c
+index fcc593c..3d6f872 100644
+--- a/dwm.c
++++ b/dwm.c
+@@ -788,7 +788,18 @@ configurerequest(XEvent *e)
+ 			 * and answering every one creates a flicker loop.
+ 			 * Repeat requests within the window get the silent
+ 			 * refusal only, which starves the loop. */
+-			if (deckmanaged) {
++			/* Java re-requests its current geometry on internal
++			 * revalidates (opening the bank, widget changes) —
++			 * noise, not a geometry grab. Only force a deck
++			 * re-assert when the request differs from what the
++			 * window already has; otherwise the quiet refusal
++			 * above is the whole answer. */
++			int rl_changed = ((ev->value_mask & CWX) && ev->x != c->x)
++			              || ((ev->value_mask & CWY) && ev->y != c->y)
++			              || ((ev->value_mask & CWWidth) && ev->width != c->w)
++			              || ((ev->value_mask & CWHeight) && ev->height != c->h);
++
++			if (deckmanaged && rl_changed) {
+ 				static struct timespec rl_last = {0};
+ 				struct timespec rl_now;
+ 				long ms;

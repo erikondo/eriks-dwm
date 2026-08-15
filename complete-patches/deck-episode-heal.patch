@@ -1,0 +1,65 @@
+diff --git a/dwm.c b/dwm.c
+index 3d6f872..fd7ca8a 100644
+--- a/dwm.c
++++ b/dwm.c
+@@ -111,6 +111,7 @@ struct Client {
+ 	unsigned int tags;
+ 	int isfixed, iscentered, isfloating, isurgent, neverfocus, oldstate, isfullscreen;
+ 	int isrl;		/* client is a RuneLite window (runelitedeck layout) */
++	int rlqx, rlqy, rlqw, rlqh;	/* last refused self-configure target we healed for */
+ 	Client *next;
+ 	Client *snext;
+ 	Monitor *mon;
+@@ -788,29 +789,30 @@ configurerequest(XEvent *e)
+ 			 * and answering every one creates a flicker loop.
+ 			 * Repeat requests within the window get the silent
+ 			 * refusal only, which starves the loop. */
+-			/* Java re-requests its current geometry on internal
+-			 * revalidates (opening the bank, widget changes) —
+-			 * noise, not a geometry grab. Only force a deck
+-			 * re-assert when the request differs from what the
+-			 * window already has; otherwise the quiet refusal
++			/* dwm never grants these requests, so the window cannot
++			 * drift - re-asserting the deck in response achieves
++			 * nothing but flicker. What the response is for is the
++			 * AWT repaint stimulus. Heal exactly once per NEW request
++			 * target (startup geometry grab, sidebar toggling to a
++			 * different width), on this client only; while RuneLite
++			 * keeps asking for the same thing (sidebar held open
++			 * against a narrower slot), stay silent - the refusal
+ 			 * above is the whole answer. */
+-			int rl_changed = ((ev->value_mask & CWX) && ev->x != c->x)
+-			              || ((ev->value_mask & CWY) && ev->y != c->y)
+-			              || ((ev->value_mask & CWWidth) && ev->width != c->w)
+-			              || ((ev->value_mask & CWHeight) && ev->height != c->h);
+-
+-			if (deckmanaged && rl_changed) {
+-				static struct timespec rl_last = {0};
+-				struct timespec rl_now;
+-				long ms;
+-
+-				clock_gettime(CLOCK_MONOTONIC, &rl_now);
+-				ms = (rl_now.tv_sec - rl_last.tv_sec) * 1000
+-				   + (rl_now.tv_nsec - rl_last.tv_nsec) / 1000000;
+-				if (ms > 500) {
+-					rl_last = rl_now;
+-					rldeckforce = 1;
+-					arrange(c->mon);
++			if (deckmanaged) {
++				int qx = (ev->value_mask & CWX) ? ev->x : c->x;
++				int qy = (ev->value_mask & CWY) ? ev->y : c->y;
++				int qw = (ev->value_mask & CWWidth) ? ev->width : c->w;
++				int qh = (ev->value_mask & CWHeight) ? ev->height : c->h;
++
++				if ((qx != c->x || qy != c->y || qw != c->w || qh != c->h)
++				&& (qx != c->rlqx || qy != c->rlqy || qw != c->rlqw || qh != c->rlqh)) {
++					int ow = c->w;
++
++					c->rlqx = qx; c->rlqy = qy;
++					c->rlqw = qw; c->rlqh = qh;
++					resizeclient(c, c->x, c->y, ow + 1, c->h);
++					resizeclient(c, c->x, c->y, ow, c->h);
++					rlexpose(c->win);
+ 				}
+ 			}
+ 		}

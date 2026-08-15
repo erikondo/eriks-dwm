@@ -111,6 +111,7 @@ struct Client {
 	unsigned int tags;
 	int isfixed, iscentered, isfloating, isurgent, neverfocus, oldstate, isfullscreen;
 	int isrl;		/* client is a RuneLite window (runelitedeck layout) */
+	int rlqx, rlqy, rlqw, rlqh;	/* last refused self-configure target we healed for */
 	Client *next;
 	Client *snext;
 	Monitor *mon;
@@ -179,6 +180,7 @@ typedef struct {
 static int rldeckrot = 0;	/* rotation offset of RuneLite clients within the deck */
 static int rldeckalt = 0;	/* grid deck: nonzero = alternate widths active */
 static int rlstackalt = 0;	/* column deck: nonzero = alternate widths active */
+static int rldeckforce = 0;	/* nonzero: next deck arrange re-asserts every client */
 
 /* function declarations */
 static void applyrules(Client *c);
@@ -270,6 +272,7 @@ static void rldeckarrange(Monitor *m, const RLSlot *slots, unsigned int nslots, 
 static void rlexpose(Window w);
 static void rldeckrotate(const Arg *arg);
 static void rldecktogglealt(const Arg *arg);
+static void rldeckassert(const Arg *arg);
 static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
 static void toggletag(const Arg *arg);
@@ -786,17 +789,30 @@ configurerequest(XEvent *e)
 			 * and answering every one creates a flicker loop.
 			 * Repeat requests within the window get the silent
 			 * refusal only, which starves the loop. */
+			/* dwm never grants these requests, so the window cannot
+			 * drift - re-asserting the deck in response achieves
+			 * nothing but flicker. What the response is for is the
+			 * AWT repaint stimulus. Heal exactly once per NEW request
+			 * target (startup geometry grab, sidebar toggling to a
+			 * different width), on this client only; while RuneLite
+			 * keeps asking for the same thing (sidebar held open
+			 * against a narrower slot), stay silent - the refusal
+			 * above is the whole answer. */
 			if (deckmanaged) {
-				static struct timespec rl_last = {0};
-				struct timespec rl_now;
-				long ms;
+				int qx = (ev->value_mask & CWX) ? ev->x : c->x;
+				int qy = (ev->value_mask & CWY) ? ev->y : c->y;
+				int qw = (ev->value_mask & CWWidth) ? ev->width : c->w;
+				int qh = (ev->value_mask & CWHeight) ? ev->height : c->h;
 
-				clock_gettime(CLOCK_MONOTONIC, &rl_now);
-				ms = (rl_now.tv_sec - rl_last.tv_sec) * 1000
-				   + (rl_now.tv_nsec - rl_last.tv_nsec) / 1000000;
-				if (ms > 500) {
-					rl_last = rl_now;
-					arrange(c->mon);
+				if ((qx != c->x || qy != c->y || qw != c->w || qh != c->h)
+				&& (qx != c->rlqx || qy != c->rlqy || qw != c->rlqw || qh != c->rlqh)) {
+					int ow = c->w;
+
+					c->rlqx = qx; c->rlqy = qy;
+					c->rlqw = qw; c->rlqh = qh;
+					resizeclient(c, c->x, c->y, ow + 1, c->h);
+					resizeclient(c, c->x, c->y, ow, c->h);
+					rlexpose(c->win);
 				}
 			}
 		}
@@ -2316,26 +2332,40 @@ rldeckarrange(Monitor *m, const RLSlot *slots, unsigned int nslots, int alt)
 		for (i = 0; i < rn; i++) {
 			const RLSlot *s = &slots[MIN(i, nslots - 1)];
 			int sw = (alt && s->walt) ? s->walt : s->w;
+			int match;
+
 			c = rl[(i + rot) % rn];
-			/* Place via resizeclient() directly, bypassing
-			 * applysizehints(): RuneLite publishes size hints that
-			 * can clamp or swallow the slot geometry entirely,
-			 * leaving the window untouched and its canvas stale.
-			 * Jiggle by one pixel when geometry already matches so
-			 * every pass emits real ConfigureNotify events and AWT
-			 * is forced to relayout. Slot w/h are the exact client
-			 * area (matches xdotool geometry). */
-			if (c->x == m->mx + s->x && c->y == m->my + s->y
-			&& c->w == sw && c->h == s->h)
+			match = (c->x == m->mx + s->x && c->y == m->my + s->y
+			      && c->w == sw && c->h == s->h);
+			/* Idempotent unless forced: a client already sitting
+			 * correctly in its slot is not touched at all, so
+			 * routine arranges (a window opening on the work
+			 * side, mfact tweaks) no longer flicker the deck.
+			 * Forced or changed clients get the full treatment:
+			 * jiggle when geometry matches (real ConfigureNotify
+			 * for AWT), exact placement, and an Expose sweep. */
+			if (match) {
+				if (!rldeckforce)
+					continue;
+				/* forced re-assert of an in-place client: the
+				 * jiggle makes a real ConfigureNotify, and the
+				 * clear+expose forces the repaint - this is the
+				 * one case that needs the flash */
 				resizeclient(c, c->x, c->y, sw + 1, s->h);
-			resizeclient(c, m->mx + s->x, m->my + s->y, sw, s->h);
+				resizeclient(c, m->mx + s->x, m->my + s->y, sw, s->h);
+				rlexpose(c->win);
+			} else {
+				/* genuine geometry change (rotation, alt-width
+				 * toggle, first placement): X moves window
+				 * contents intact and exposes newly visible
+				 * regions itself, and a live Java client
+				 * handles real resizes fine - no manual
+				 * clear+expose, so same-size slot moves are
+				 * flicker-free */
+				resizeclient(c, m->mx + s->x, m->my + s->y, sw, s->h);
+			}
 		}
-		/* RuneLite (Java/AWT) often fails to repaint regions newly
-		 * exposed by a WM resize, leaving black bars until an
-		 * external event (screenshot overlay, manual resize)
-		 * generates Expose events. Generate them ourselves. */
-		for (i = 0; i < rn; i++)
-			rlexpose(rl[i]->win);
+		rldeckforce = 0;
 	}
 
 	/* everything else tiles to the right of the deck; with no
@@ -2401,6 +2431,13 @@ void
 rldeckrotate(const Arg *arg)
 {
 	rldeckrot += arg->i;
+	arrange(selmon);
+}
+
+void
+rldeckassert(const Arg *arg)
+{
+	rldeckforce = 1;
 	arrange(selmon);
 }
 

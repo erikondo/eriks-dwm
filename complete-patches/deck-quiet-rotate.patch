@@ -1,0 +1,36 @@
+diff --git a/dwm.c b/dwm.c
+index fd7ca8a..18ab800 100644
+--- a/dwm.c
++++ b/dwm.c
+@@ -2344,12 +2344,26 @@ rldeckarrange(Monitor *m, const RLSlot *slots, unsigned int nslots, int alt)
+ 			 * Forced or changed clients get the full treatment:
+ 			 * jiggle when geometry matches (real ConfigureNotify
+ 			 * for AWT), exact placement, and an Expose sweep. */
+-			if (match && !rldeckforce)
+-				continue;
+-			if (match)
++			if (match) {
++				if (!rldeckforce)
++					continue;
++				/* forced re-assert of an in-place client: the
++				 * jiggle makes a real ConfigureNotify, and the
++				 * clear+expose forces the repaint - this is the
++				 * one case that needs the flash */
+ 				resizeclient(c, c->x, c->y, sw + 1, s->h);
+-			resizeclient(c, m->mx + s->x, m->my + s->y, sw, s->h);
+-			rlexpose(c->win);
++				resizeclient(c, m->mx + s->x, m->my + s->y, sw, s->h);
++				rlexpose(c->win);
++			} else {
++				/* genuine geometry change (rotation, alt-width
++				 * toggle, first placement): X moves window
++				 * contents intact and exposes newly visible
++				 * regions itself, and a live Java client
++				 * handles real resizes fine - no manual
++				 * clear+expose, so same-size slot moves are
++				 * flicker-free */
++				resizeclient(c, m->mx + s->x, m->my + s->y, sw, s->h);
++			}
+ 		}
+ 		rldeckforce = 0;
+ 	}

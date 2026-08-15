@@ -146,6 +146,7 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_g,      setlayout,      {.v = &layouts[4]} },
 	{ MODKEY|ShiftMask,             XK_g,      rldecktogglealt, {.v = &rldeckalt } },
 	{ MODKEY|ShiftMask,             XK_r,      rldecktogglealt, {.v = &rlstackalt } },
+	{ MODKEY,                       XK_o,      rldeckassert,   {0} },
 	{ MODKEY,                       XK_v,      rldeckrotate,   {.i = +1 } },
 	{ MODKEY|ShiftMask,             XK_v,      rldeckrotate,   {.i = -1 } },
 	{ MODKEY,                       XK_space,  setlayout,      {0} },
