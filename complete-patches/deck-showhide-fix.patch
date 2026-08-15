@@ -1,0 +1,48 @@
+diff --git a/dwm.c b/dwm.c
+index 7043f17..8b68b8a 100644
+--- a/dwm.c
++++ b/dwm.c
+@@ -270,6 +270,7 @@ static void leftreserve(Monitor *m);
+ static void runelitedeck(Monitor *m);
+ static void rldeckarrange(Monitor *m, const RLSlot *slots, unsigned int nslots, int alt);
+ static void rlexpose(Window w);
++static int rldeckmanaged(Client *c);
+ static void rllog(const char *fmt, ...);
+ static void rldeckrotate(const Arg *arg);
+ static void rldecktogglealt(const Arg *arg);
+@@ -749,9 +750,7 @@ configurerequest(XEvent *e)
+ 		 * geometry during startup and on internal relayouts) and
+ 		 * re-run the deck so the slot geometry + Expose land exactly
+ 		 * when the client is actively laying itself out. */
+-		int deckmanaged = c->isrl
+-			&& (c->mon->lt[c->mon->sellt]->arrange == runelitedeck
+-			 || c->mon->lt[c->mon->sellt]->arrange == leftreserve);
++		int deckmanaged = rldeckmanaged(c);
+ 
+ 		if (c->isrl)
+ 			rllog("req    win=%lx  mask=%lx  ask %dx%d%+d%+d  have %dx%d%+d%+d  deck=%d healed=%d",
+@@ -2203,7 +2202,8 @@ showhide(Client *c)
+ 	if (ISVISIBLE(c)) {
+ 		/* show clients top down */
+ 		XMoveWindow(dpy, c->win, c->x, c->y);
+-		if ((!c->mon->lt[c->mon->sellt]->arrange || c->isfloating) && !c->isfullscreen)
++		if ((!c->mon->lt[c->mon->sellt]->arrange || c->isfloating) && !c->isfullscreen
++		&& !rldeckmanaged(c))
+ 			resize(c, c->x, c->y, c->w, c->h, 0);
+ 		showhide(c->snext);
+ 	} else {
+@@ -2320,6 +2320,14 @@ rllog(const char *fmt, ...)
+ 	fflush(f);
+ }
+ 
++static int
++rldeckmanaged(Client *c)
++{
++	return c->isrl
++	    && (c->mon->lt[c->mon->sellt]->arrange == runelitedeck
++	     || c->mon->lt[c->mon->sellt]->arrange == leftreserve);
++}
++
+ static void
+ rlexpose(Window w)
+ {

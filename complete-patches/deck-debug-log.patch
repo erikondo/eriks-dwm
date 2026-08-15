@@ -1,0 +1,74 @@
+diff --git a/dwm.c b/dwm.c
+index 5cbb7d6..7043f17 100644
+--- a/dwm.c
++++ b/dwm.c
+@@ -270,6 +270,7 @@ static void leftreserve(Monitor *m);
+ static void runelitedeck(Monitor *m);
+ static void rldeckarrange(Monitor *m, const RLSlot *slots, unsigned int nslots, int alt);
+ static void rlexpose(Window w);
++static void rllog(const char *fmt, ...);
+ static void rldeckrotate(const Arg *arg);
+ static void rldecktogglealt(const Arg *arg);
+ static void rldeckassert(const Arg *arg);
+@@ -752,8 +753,18 @@ configurerequest(XEvent *e)
+ 			&& (c->mon->lt[c->mon->sellt]->arrange == runelitedeck
+ 			 || c->mon->lt[c->mon->sellt]->arrange == leftreserve);
+ 
++		if (c->isrl)
++			rllog("req    win=%lx  mask=%lx  ask %dx%d%+d%+d  have %dx%d%+d%+d  deck=%d healed=%d",
++			      c->win, ev->value_mask,
++			      (ev->value_mask & CWWidth) ? ev->width : -1,
++			      (ev->value_mask & CWHeight) ? ev->height : -1,
++			      (ev->value_mask & CWX) ? ev->x : -1,
++			      (ev->value_mask & CWY) ? ev->y : -1,
++			      c->w, c->h, c->x, c->y, deckmanaged, c->rlhealed);
+ 		if ((c->isfloating && !deckmanaged) || !selmon->lt[selmon->sellt]->arrange) {
+ 			m = c->mon;
++			if (c->isrl)
++				rllog("GRANT  win=%lx", c->win);
+ 
+ 			/* ---- POSITION: ignore x/y when the app is only resizing ---- */
+ 			if ((ev->value_mask & CWX) && !(ev->value_mask & (CWWidth | CWHeight))) {
+@@ -807,6 +818,7 @@ configurerequest(XEvent *e)
+ 				int ow = c->w;
+ 
+ 				c->rlhealed = 1;
++				rllog("heal   win=%lx", c->win);
+ 				resizeclient(c, c->x, c->y, ow + 1, c->h);
+ 				resizeclient(c, c->x, c->y, ow, c->h);
+ 				rlexpose(c->win);
+@@ -2290,6 +2302,24 @@ leftreserve(Monitor *m)
+ 	rldeckarrange(m, rlstackslots, LENGTH(rlstackslots), rlstackalt);
+ }
+ 
++static void
++rllog(const char *fmt, ...)
++{
++	static FILE *f = NULL;
++	va_list ap;
++	struct timespec ts;
++
++	if (!f && !(f = fopen("/tmp/dwm-deck.log", "a")))
++		return;
++	clock_gettime(CLOCK_MONOTONIC, &ts);
++	fprintf(f, "[%ld.%03ld] ", ts.tv_sec, ts.tv_nsec / 1000000);
++	va_start(ap, fmt);
++	vfprintf(f, fmt, ap);
++	va_end(ap);
++	fprintf(f, "\n");
++	fflush(f);
++}
++
+ static void
+ rlexpose(Window w)
+ {
+@@ -2358,6 +2388,9 @@ rldeckarrange(Monitor *m, const RLSlot *slots, unsigned int nslots, int alt)
+ 				 * handles real resizes fine - no manual
+ 				 * clear+expose, so same-size slot moves are
+ 				 * flicker-free */
++				rllog("place  win=%lx  %dx%d%+d%+d -> %dx%d%+d%+d",
++				      c->win, c->w, c->h, c->x, c->y,
++				      sw, s->h, m->mx + s->x, m->my + s->y);
+ 				resizeclient(c, m->mx + s->x, m->my + s->y, sw, s->h);
+ 			}
+ 		}

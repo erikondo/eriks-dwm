@@ -23,7 +23,6 @@
 #include <errno.h>
 #include <locale.h>
 #include <signal.h>
-#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -270,6 +269,7 @@ static void leftreserve(Monitor *m);
 static void runelitedeck(Monitor *m);
 static void rldeckarrange(Monitor *m, const RLSlot *slots, unsigned int nslots, int alt);
 static void rlexpose(Window w);
+static int rldeckmanaged(Client *c);
 static void rldeckrotate(const Arg *arg);
 static void rldecktogglealt(const Arg *arg);
 static void rldeckassert(const Arg *arg);
@@ -748,9 +748,7 @@ configurerequest(XEvent *e)
 		 * geometry during startup and on internal relayouts) and
 		 * re-run the deck so the slot geometry + Expose land exactly
 		 * when the client is actively laying itself out. */
-		int deckmanaged = c->isrl
-			&& (c->mon->lt[c->mon->sellt]->arrange == runelitedeck
-			 || c->mon->lt[c->mon->sellt]->arrange == leftreserve);
+		int deckmanaged = rldeckmanaged(c);
 
 		if ((c->isfloating && !deckmanaged) || !selmon->lt[selmon->sellt]->arrange) {
 			m = c->mon;
@@ -2191,7 +2189,8 @@ showhide(Client *c)
 	if (ISVISIBLE(c)) {
 		/* show clients top down */
 		XMoveWindow(dpy, c->win, c->x, c->y);
-		if ((!c->mon->lt[c->mon->sellt]->arrange || c->isfloating) && !c->isfullscreen)
+		if ((!c->mon->lt[c->mon->sellt]->arrange || c->isfloating) && !c->isfullscreen
+		&& !rldeckmanaged(c))
 			resize(c, c->x, c->y, c->w, c->h, 0);
 		showhide(c->snext);
 	} else {
@@ -2288,6 +2287,14 @@ leftreserve(Monitor *m)
 {
 	/* column deck: four stacked RuneLite slots down the left edge */
 	rldeckarrange(m, rlstackslots, LENGTH(rlstackslots), rlstackalt);
+}
+
+static int
+rldeckmanaged(Client *c)
+{
+	return c->isrl
+	    && (c->mon->lt[c->mon->sellt]->arrange == runelitedeck
+	     || c->mon->lt[c->mon->sellt]->arrange == leftreserve);
 }
 
 static void
